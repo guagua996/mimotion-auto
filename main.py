@@ -42,6 +42,27 @@ def get_step_range():
     return min_step, max_step
 
 
+def get_step_range_from_schedule(hour=None, minute=None):
+    if hour is None:
+        hour = time_bj.hour
+    if minute is None:
+        minute = time_bj.minute
+    current_minutes = hour * 60 + minute
+    step_schedule = config.get('STEP_SCHEDULE')
+    if not step_schedule:
+        return get_step_range()
+    for item in step_schedule:
+        until = str(item.get('UNTIL', '')).strip()
+        matched = re.fullmatch(r'(\d{1,2}):(\d{2})', until)
+        if not matched:
+            continue
+        until_minutes = int(matched.group(1)) * 60 + int(matched.group(2))
+        if current_minutes <= until_minutes:
+            return int(item.get('MIN')), int(item.get('MAX'))
+    last_item = step_schedule[-1]
+    return int(last_item.get('MIN')), int(last_item.get('MAX'))
+
+
 # 虚拟ip地址
 def fake_ip():
     # 随便找的国内IP段：223.64.0.0 - 223.117.255.255
@@ -323,7 +344,7 @@ if __name__ == "__main__":
         if users is None or passwords is None:
             print("未正确配置账号密码，无法执行")
             exit(1)
-        min_step, max_step = get_step_range()
+        min_step, max_step = get_step_range_from_schedule()
         use_concurrent = config.get('USE_CONCURRENT')
         if use_concurrent is not None and use_concurrent == 'True':
             use_concurrent = True
